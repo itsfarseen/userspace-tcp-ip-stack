@@ -1,5 +1,5 @@
 [package]
-name = "NetworksMiniProject"
+name = "networks-mini-project"
 version = "0.1.0"
 authors = ["Farzeen <happycoder97@protonmail.com>"]
 edition = "2018"
