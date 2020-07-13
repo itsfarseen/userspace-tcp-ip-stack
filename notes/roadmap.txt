@@ -1,0 +1,71 @@
+                        
+                                ROADMAP
+                              -----------
+
+Overview
+========
+
+    1. Implement TCP using TUN
+    2. Implement IP using TAP
+    3. Bridge 1 & 2     
+
+
+Implement TCP
+=============
+
+Roadmap
+-------
+    [x] Read functional specification
+    [ ] Tun setup/teardown script
+    [ ] Parse IP packet
+    [ ] Parse TCP segment
+    [ ] Establish connection
+
+
+    [ ] State machine
+    [ ] Congestion Control
+
+
+Core functionality (RFC 793)
+----------------------------
+
+Header
+------
+
+Src Port - 16 bits
+Dst Port - 16 bits
+Seq num  - 32 bits
+Ack num  - 32 bits
+Data     .   
+Offset   - 4 bits       - Number of 32 bit words in TCP header
+Reserved - 6 bits       - Zeroes
+URG   \                 - Urgent Pointer field significant
+ACK    |
+PSH    | ---   6 bits
+RST    |    (1 bit each)
+SYN    |
+FIN   /
+Window   - 16 bits      - Number of data octets starting from ack num field
+                          that this sender is willing to accept
+Checksum - 16 bits
+Urgt Ptr - 16 bits
+Options  - (8xn bits)   - List of options
+Padding  -              - To make sure TCP header ends and data begins
+                          on a 32 bit boundary
+Data     - 
+
+
+Notes
+-----
+
+*   Section 3.6 of RFC 793, describing TCP's handling of the IP
+    precedence and security compartment, is mostly irrelevant today.
+
+    https://tools.ietf.org/html/rfc7414#section-2 (page 6)
+
+*   [RFC2873] removes from the TCP specification all processing of 
+    the precedence bits of the TOS byte of the IP header.
+
+    https://tools.ietf.org/html/rfc7414#section-2 (page 7)
+
+*   

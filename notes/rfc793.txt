@@ -1,0 +1,166 @@
+                               RFC 793 - TCP/IP
+                               ================  
+
+Header
+------
+
+Src Port    - 16 bits
+Dst Port    - 16 bits
+Seq num     - 32 bits
+Ack num     - 32 bits
+Data Offset - 4 bits       - Number of 32 bit words in TCP header
+Reserved    - 6 bits       - Zeroes
+URG   \                    - Urgent Pointer field significant
+ACK    |
+PSH    | ----  6 bits
+RST    |    (1 bit each)
+SYN    |
+FIN   /
+Window      - 16 bits      - Number of data octets starting from ack num field
+                             that this sender is willing to accept
+Checksum    - 16 bits
+Urgt Ptr    - 16 bits
+Options     - (8xn bits)   - List of options
+Padding     -              - To make sure TCP header ends and data begins on a 
+                             32 bit boundary
+Data        -              - IP will give us a fixed size packet.  
+                             Data is whatever remaining after previous fields.
+
+
+
+* Establishing connection involves SYN flag and exchange of three messages.
+* Sender indicates in each SEND call using PSH flag whether the data upto and
+  including that call should be immediately pushed through to the receiving
+  user.
+* When the receiving TCP sees the PUSH flag, it must not wait for more data from
+  the sending TCP, before passing the data to the receiving process.
+* Urgent is rarely used
+  (https://stackoverflow.com/questions/9153566/difference-between-push-and-urgent-flags-in-tcp)
+* Checksum is 16bit 1's complement of 1's complement sum of all 16bit words in
+  the header and text.
+  For calculations:
+  - If a segment contains odd number of octets, the last octet is padded on the
+    right with zeros to form a 16bit word.
+  - Checksum field itself is replaced with zeroes.
+* Option length is inclusive of option kind and option length fields.
+* MSS - Maximum Segment Size
+  Communicates the max receive segment size at the TCP which sends this segment.
+  Must only be sent in the initial connection request. (ie, in segs with SYN set)
+  If not specified, an segment size is allowed.
+
+
+Sequence Numbers
+----------------
+
+* ACK is cumulative. 
+  ACK n means all octets upto but not including n is acknowledged.
+* All arithmetic must be done modulo 2^32 
+* =< means less than or equal modulo 2^32 (sic)
+
+We need to check:
+  * An ACK refers to a sent, unacknowledged seq num.
+  * All seq nums of a segment has been ACKed.
+  * Incoming segment contains seq numbers which are expected.
+    Segment overlaps the receive window.
+    ie, detect and ignore duplicate data.
+
+SND.UNA: Oldest unacked seq num
+SND.NXT: next seq num to send
+SEG.ACK: ACK field of a segment = next seq num expected by receiving TCP.
+SEG.SEQ: First seq num of this segment
+SEG.LEN: No of octets occupied by data in the segment.
+         counting SYN and FIN --- What does this mean?
+                                  Do we count SYN as one even if no data?
+                                  (A: Yep! See [Implicit Sequence Numbers] below)
+Acceptable ack:
+  SND.UNA < SEG.ACK =< SND.NXT
+
+A segment is considered fully acknowledged if:
+  SEG.SEQ + SEG.LEN =< SEGrecvd.ACK
+
+RCV.NXT: Next seq num expected on an incoming seg.
+          = lower edge of recv window.
+RCV.NXT + RCV.WND - 1
+       : Last seq num expected on an incoming seg.
+
+A received segment is (atleast partially) valid if:
+  RCV.NXT =< SEG.SEQ < RCV.NXT + RCV.WND
+or
+  RCV.NXT =< SEG.SEQ + SEG.LEN - 1 < RCV.NXT + RCV.WND
+
+Zero Windows:
+
+A TCP is allowed to have Zero Receive Windows while transmitting data and
+receiving ACKs. However, a TCP must still process the RST and URG fields.
+
+SEG.LEN  RCV.WND  Test
+-------  -------  ---------------------
+  0        0     SEG.SEQ = RCV.NXT
+  0       >0     RCV.NXT =< SEG.SEQ < RCV.NXT + RCV.WND
+ >0        0     not acceptable
+ >0       >0     RCV.NXT =< SEG.SEQ < RCV.NXT + RCV.WND
+                or RCV.NXT =< SEG.SEQ + SEG.LEN - 1 < RCV.NXT + RCV.WND
+
+Implicit Sequence Numbers:
+
+- For allowing retransmission and ACKing, SYN and FIN are assigned seq nums,
+  even though they are not carried in the data area.
+- SYN is considered to occur before the first data octet.
+- FIN is considered to occur after the last data octet.
+- SEG.LEN includes both data and these flags which occupy the seq space.
+
+Initial Sequence Number Selection:
+
+SYN stands for Synchronizing initial sequence numbers of sender and receiver.
+
+TCP allows connection reuse.  A connection is defined by a pair of sockets.
+ie, pairs of sockets can be reused. If a segment from a previous incarnation of
+a connection is received, we might erroneously accept it.
+We avoid this by choosing ISN's using a clock and by using the Quiet Time Concept.
+
+ISN Generator: Bound to a 32 bit clock whose low order bit is incremented
+roughly every 4 micro seconds. This cycles approx. every 4.55 hours.
+MSL is usually less than this. So we can assume ISNs will be unique.
+Note: This only ensures ISN's uniqueness, not seq nums of all packets.
+
+ISR - ISN of Receiving TCP
+ISS - ISN of Sending TCP
+
+SYN Procedure:
+
+A --> B   SYN my seq num is X
+A <-- B   ACK your seq num is X
+A <-- B   SYN my seq num is Y
+A --> B   ACK your seq num is Y
+
+Here 3 & 4 can be combined. So we get a 3 step process.
+This is known as the three way handshake.
+
+Quiet Time Concept:
+
+This is to make sure that no old packet still in the network has a seq num equal
+to the ISN. TCP must keep quiet for MSL time before assigning any sequence
+number up on starting up. Do the same if the TCP loses memory of previous seq
+nums.
+
+RFC 793 assumes MSL = 2 mins.
+
+
+Establishing a connection
+-------------------------
+
+
+Notes
+-----
+
+*   Section 3.6 of RFC 793, describing TCP's handling of the IP
+    precedence and security compartment, is mostly irrelevant today.
+
+    https://tools.ietf.org/html/rfc7414#section-2 (page 6)
+
+*   [RFC2873] removes from the TCP specification all processing of 
+    the precedence bits of the TOS byte of the IP header.
+
+    https://tools.ietf.org/html/rfc7414#section-2 (page 7)
+
+*   
