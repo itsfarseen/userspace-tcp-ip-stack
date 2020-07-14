@@ -113,10 +113,11 @@ Initial Sequence Number Selection:
 
 SYN stands for Synchronizing initial sequence numbers of sender and receiver.
 
-TCP allows connection reuse.  A connection is defined by a pair of sockets.
-ie, pairs of sockets can be reused. If a segment from a previous incarnation of
-a connection is received, we might erroneously accept it.
-We avoid this by choosing ISN's using a clock and by using the Quiet Time Concept.
+TCP allows connection reuse. A connection is defined by a pair of sockets. ie,
+pairs of sockets can be reused. socket = address + port.
+If a segment from a previous incarnation of a connection is received, we might
+erroneously accept it. We avoid this by choosing ISNs using a clock and by using
+the Quiet Time Concept.
 
 ISN Generator: Bound to a 32 bit clock whose low order bit is incremented
 roughly every 4 micro seconds. This cycles approx. every 4.55 hours.

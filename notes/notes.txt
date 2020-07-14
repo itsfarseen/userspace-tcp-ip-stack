@@ -1,0 +1,18 @@
+Things to figure out:
+
+Are tcp stacks always dependent on TUN/TAP?
+Is there a more general interface?
+
+  tcp::init(Device* dev);
+  dev->send(); dev->recv();
+
+How to handle async? 
+What do we need to do async-ly?
+Currently we send something, then wait for reply.
+Async not required for single connection stuff.
+
+TCP need to inspect IP source and dest addresses to match incoming packets to
+TCBs. 
+
+How to calculate window size?
+How to generate initial sequence number?
