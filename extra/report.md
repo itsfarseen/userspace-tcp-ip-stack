@@ -11,7 +11,22 @@ geometry: margin=1in
 This project is a minimal TCP stack, which can be used in embedded devices and
 other resource constrained settings. 
 
-It implements the functional specification outlined in RFC 793. 
+It implements a subset of the functional specification outlined in RFC 793. 
+
+What is implemented:
+
+* TCP State machine
+* Passive Open
+* Connection establishment and clearing
+* Data transfer
+* Retransmission
+
+What is not implemented:
+
+* Active Open
+* Flow Control
+* Urgent Pointer
+* Precedence and Security
 
 It is written in the systems programming language Rust, which can target a
 variety of embedded boards while providing high level features not found in C.
@@ -19,8 +34,9 @@ variety of embedded boards while providing high level features not found in C.
 Since it is intended to work in a resource constrained environment, it is
 implemented as single threaded. Therefore, it can only serve one client
 simultaneously. But it can serve more than one client sequentially as first
-client closes the connection. So it is suited to short lived connections like in an HTTP Web Server. A demo HTTP Server is also included as an example, which
-supports a minimal subset of HTTP 1.0.
+client closes the connection. So it is suited to short lived connections like in
+an HTTP Web Server for an IoT device. A demo HTTP Server is also included as an
+example, which supports a minimal subset of HTTP 1.0.
 
 The main goal of this project has been to understand the internal workings of
 the TCP protocol. It was a really good learning experience to read the original
@@ -38,7 +54,7 @@ struct IPPDU {
 }
 
 interface IP {
-    send(IPPDU packet);
+    void send(IPPDU packet);
     IPPDU receive();
 }
 ```
@@ -51,7 +67,7 @@ interface ApplicationService {
     void on_close();
 }
 
-Response = struct {
+struct Response {
     byte[] reply;
     bool should_close;
 }
