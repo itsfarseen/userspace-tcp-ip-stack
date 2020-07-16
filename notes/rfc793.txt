@@ -150,6 +150,61 @@ RFC 793 assumes MSL = 2 mins.
 Establishing a connection
 -------------------------
 
+Event: Segment Arrives
+----------------------
+
+state == CLOSED:
+  discard segment.
+  if not seg.rst, we have to send rst:
+    if seg.ack: <seq=seg.ack><ctl=rst> (we have to set seq = previous ack)
+    else: <seq=0><ack=seg.seq+seg.len><ctl=rst,ack> 
+      seq=0 because we don't have any prev acks
+      ctl=ack to let recv tcp know which seg this is for
+
+state == LISTEN:
+  if seg.rst: return (already in reset state)
+  if seg.ack: <seq=seg.ack><ctl=rst> (we hadn't sent anything to ack)
+  if seg.syn: 
+    rcv.nxt = seg.seq+1
+    irs = seg.seq
+    iss = <generate>
+    <seq=iss><ack=rcv.nxt><ctl=syn,ack>
+    snd.nxt = iss+1
+    snd.una = iss
+    state = SYN-RECEIVED
+    if listen was not full specified, fill in unspecified fields now
+  else: bad segment, return
+
+state == SYN-SENT
+  if seg.ack:
+    if seg.ack <= iss || seg.ack > snd.nxt: 
+      if not seg.rst: <seq=seg.ack><ctl=rst>
+      else: ignore, return
+    if snd.una <= seg.ack <= snd.nxt: 
+      ack is acceptable (what to do??)
+  if seg.rst:
+    if ack was acceptable: state=CLOSED, inform user of connection reset
+    else: ignore, return
+  if seg.syn:
+    debug_assert (ack must be ok || no ack and no rst)
+    rcv.nxt = seg.seq+1
+    irs = seg.seq
+    if seg.ack: snd.una = seg.ack
+    remove acked segs from retransmission queue
+
+    if snd.una > iss (our syn has been acked):
+      <seq=snd.nxt><ack=rcv.nxt><ctl=ack>
+      data or controls queued for retransmission may be included
+        -- figure out what to do with this
+    else:
+      state=SYN-RECEIVED
+      <seq=iss><ack=rcv.nxt><ctl=syn,ack>
+      if there are other controls or text in the segment, queue them for
+      processing after the Established state has been reached.
+        -- what? why?
+    
+    syn not set, rst not set => ignore, return
+
 
 Notes
 -----
@@ -164,4 +219,7 @@ Notes
 
     https://tools.ietf.org/html/rfc7414#section-2 (page 7)
 
-*   
+*   If we receive a reset from the other party, it could be for a spurious
+    segment.  ie, a segment that is not part of this connection, was sent
+    previously but got delayed by the network.
+

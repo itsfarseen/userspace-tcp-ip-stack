@@ -15,4 +15,27 @@ TCP need to inspect IP source and dest addresses to match incoming packets to
 TCBs. 
 
 How to calculate window size?
+Use a constant for now.
+
 How to generate initial sequence number?
+Use a constant for now, use SystemTime::micros() later.
+
+SND.UNA
+SND.NXT
+
+SEG.ACK
+SEG.SEQ
+SEG.LEN
+
+RCV.NXT
+
+Acceptable ACK:   SND.UNA < SEG.ACK =< SND.NXT
+Valid Receive :   RCV.NXT =< SEG.SEQ < RCV.NXT+RCV.WND
+               or RCV.NXT =< SEG.SEQ+SEG.LEN-1 < RCV.NXT+RCV.WND
+
+
+How to deal with packets that arrive out of order?
+
+  ie, RCV.NXT < SEG.SEQ < RCV.NXT+RCV.WND
+            ^^^^^
+              strictly less than
