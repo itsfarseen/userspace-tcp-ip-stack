@@ -1,0 +1,85 @@
+
+Hi, my name is Farseen. 
+I would like to present my mini project, which is Minimal TCP implementation for
+embedded devices.
+
+-- 
+
+Introduced in 1981, TCP remains at the heart of the internet even today.
+Even though everything about computing has undergone radical changes over the
+years, TCP has changed little from the original specification RFC 793, except
+for minor enhancements.
+
+TCP is a transport layer protocol. The role of TCP is to provide reliability
+over the message transmitted through the Internet Protocol. TCP can withstand
+the unpredictability of the underlying network and provide us with means to
+ensure that the data we send are received correctly and in order. Another
+feature TCP provides is the ability to multiplex, that is, by giving each
+service a port number, multiple programs on a single machine with a single IP
+can offer multiple services to the internet.
+
+The way TCP ensures reliability is by synchronizing and maintaing state of a
+connection. That is whenever two applications want to communicate over TCP, an
+entry is created in the TCP's internal state associated with the two sockets.
+
+Then over the course of the connection, TCP employs various techniques to ensure
+that these states are kept synchronized.
+
+--
+
+TCP numbers each byte of data sent and keeps track of them.
+The receiving TCP is supposed to "acknowledge" (ACK) the data it receives.
+Then the sending TCP keeps track of which bytes have been acknowledged, and
+periodically retransmits the unacknowledged bytes.
+To simplify the acknowledgement procedure, TCP uses Cumulative Acknowledgement.
+Which means if byte n is acknowledged, then all bytes till n are considered
+acknowledged.
+Later TCP introduced an extension, which allows the receiver to Selectively
+acknowledge the received bytes in case a segment in the middle is missing.
+
+Both ends of TCP has to choose their own initial sequence numbers before
+starting a connection. This is done to avoid conflicts with delayed packets from
+previous connections. Then they have to communicate this with each other.
+This is done through a procedure called Three Way Handshake.
+
+First TCP chooses an initial sequence number and sends it through a segment with
+it's SYN control bit set.
+Then the other party acknowledges the sequence number, chooses it's initial
+sequence number and sends it back to the first party.
+Then the first party acknowledges it.
+Now the connection is established between two parties.
+
+--
+
+This an approximate outline of the state diagram of this simplified version of
+TCP. Most of the states from RFC 793 are here, except those used by Active Open,
+which is used by client side TCP.
+
+Upon establishing the connection, this implementation of TCP notifies the
+application of the connection.
+Then in a loop, we wait for data from the client, then verifies the sequence
+numbers and passes the data to application layer. Then we send back the data
+returned by application layer. Unless the application signals to close the
+connection, we keep on repeating this in a loop.
+
+There are two ways the connetion is terminated.
+First, the application can signal the termination of the connection.
+Then we send a segment with FIN bit set and enter FIN WAIT 1 state.
+Here we wait till the ACK for FIN is received. If we don't get any reply after a
+set timeout, we assume that segment was lost and retransmit it.
+
+Then we enter FIN WAIT 2, and wait here till we receive FIN from the other side.
+Then we enter TIME WAIT state, and wait for 2 times the time that is needed for
+maximum segment life. This is to ensure that any delayed packets intended of
+this connection doesn't reach the next incarnation of the connection.
+
+After that we enter the CLOSED state.
+
+The second way to close the connection is by receiving a FIN segment from the
+client. Then we acknowledge the FIN, and enter the CLOSE WAIT state. 
+In normal TCP, we stay in this state till the user calls close function. But
+here for simplicity, we directly send the FIN segment and move on to LAST-ACK
+state. Here we wait for the ACK of our FIN, like in the first case. And then we
+enter the CLOSED State.
+
+--

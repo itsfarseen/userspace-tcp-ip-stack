@@ -1,0 +1,21 @@
+
+
+
+
+
+        Transmission Control Protocol
+        =============================
+
+        * Transport layer protocol
+        * Connection Oriented
+        * Reliable
+        * Multiplexing
+
+
+
+
+        Connection
+        ----------
+        Defined as a pair of sockets. Socket = IP Address + Port.
+
+        TCP Synchronizes and maintains state between two sockets.

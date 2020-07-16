@@ -1,0 +1,23 @@
+
+
+
+
+        Sequence Numbers
+        ================
+
+        * Key part of ensuring reliable data delivery.
+        * Cumulative Acknowledgement
+
+
+        Three Way Handshake
+        ===================
+
+          A                    B
+          |                    |
+          |     --- SYN --->   |
+          |                    |
+          |   <-- SYN, ACK --  |
+          |                    |
+          |     --- ACK --->   |
+
+        For synchronizing initial sequence numbers.

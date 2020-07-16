@@ -1,0 +1,38 @@
+
+                                                    TCP State Diagram
+                                                    =================
+Note: [ASDFG] means state
+      (QWERT) means an external event
+      |- Do xyz. means the process we execute.
+
+
+   [CLOSED] ----> (Passive Open) -----> [LISTEN] 
+                                           |
+                                           |
+         -------- [SYN RCVD] <-------- (rcv SYN) 
+        |
+        |
+    (rcv ACK of SYN) ----> [ESTAB] ---------------------------------- (rcv FIN) ----------->----------->------------\
+                     |      |- Call ApplicationLayer.on_connect()                                                   |- Send ACK
+                     |      |                                                                                       |    
+                     |      \----------- (rcv data) --->-|- Verify sequence numbers                                 |    
+                     |                                   |- (reply, should_close) =                                 |    
+                     |                                   |      ApplicationLayer.on_receive(data)                   |    
+                     |                                   |- if should_close: ----------------                       |    
+                     |                                   \- else ---                         |- ACK received data   |    
+                     |                                              |- ACK received data     |- Send FIN            |    
+                     |                                              |- Send reply data       |                      |    
+                     |                                              |                        |                      |    
+                     \---<--------------<------------<--------------/                        |                   [CLOSE WAIT]        
+                                                                                             |                      |- Send FIN
+                  (rcv FIN) -<- [FIN WAIT-2] -<- (rcv ACK of FIN) -<- [FIN WAIT-1] ---<------/                      |
+                   |- Send ACK                                                                                   [LAST-ACK]    
+              [TIME WAIT]                                                                                           |
+                   |                                                                                           (rcv ACK of FIN)     
+              (Timeout 2MSL)                                                                                        |
+                   |                                                                                                |
+                   |                                                                                                |
+                [CLOSED] -------------------------<-------------------------------------------------------<---------/                                                                
+                                                                                         
+                                                                                       
+                                                                                      

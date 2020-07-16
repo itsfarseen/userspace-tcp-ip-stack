@@ -18,7 +18,7 @@ pub trait Service {
 pub enum Response {
     None,
     Data(Vec<u8>),
-    Close(Vec<u8>)
+    Close(Vec<u8>),
 }
 
 pub struct TCP {
@@ -32,7 +32,7 @@ type Socket = ([u8; 4], u16);
 
 pub struct TCB {
     pub state: TCPState,
-    svc: Box<dyn Service>,
+    pub svc: Box<dyn Service>,
     local_socket: Socket,
     foreign_socket: Option<Socket>,
     open_mode: OpenMode,
@@ -75,8 +75,6 @@ pub enum TCPState {
     LastAck,
     TimeWait,
 }
-
-
 
 impl TCP {
     pub fn with_iface(
@@ -282,6 +280,7 @@ impl TCP {
                         let mut out_tcph = tcph_reply(&in_tcph, seq, self.window_size);
                         out_tcph.acknowledgment_number = self.tcb.rcv_nxt;
                         out_tcph.ack = true;
+
                         self.send_tcph(&mut out_tcph, &in_iph, &[]);
                         return;
                     } else {
@@ -510,24 +509,24 @@ impl TCP {
             out_tcph.acknowledgment_number = ack;
             out_tcph.ack = true;
 
-            let data_to_send = if in_tcppld.len() > 0 {
-                self.tcb.svc.on_receive(in_tcppld)
-            } else {
-                Response::None
-            };
-
-            println!("Here");
-            if let Response::Data(data_to_send) = data_to_send {
-                self.send_tcph(&mut out_tcph, &in_iph, &data_to_send[..]);
-                self.tcb.snd_nxt += data_to_send.len() as u32;
-            } else if let Response::Close(data_to_send) = data_to_send {
-                out_tcph.fin = true;
-                self.send_tcph(&mut out_tcph, &in_iph, &data_to_send[..]);
-                self.tcb.snd_nxt += data_to_send.len() as u32;
-                self.tcb.state = TCPState::FinWait1;
-                return;
-            } else {
-                self.send_tcph(&mut out_tcph, &in_iph, &[]);
+            if in_tcppld.len() > 0 {
+                let data_to_send = self.tcb.svc.on_receive(in_tcppld);
+                println!("Here");
+                if let Response::Data(data_to_send) = data_to_send {
+                    println!("Sending data");
+                    self.send_tcph(&mut out_tcph, &in_iph, &data_to_send[..]);
+                    self.tcb.snd_nxt += data_to_send.len() as u32;
+                } else if let Response::Close(data_to_send) = data_to_send {
+                    println!("Sending data and closing");
+                    out_tcph.fin = true;
+                    self.send_tcph(&mut out_tcph, &in_iph, &data_to_send[..]);
+                    self.tcb.snd_nxt += data_to_send.len() as u32;
+                    self.tcb.state = TCPState::FinWait1;
+                    return;
+                } else {
+                    println!("Sending nothing");
+                    self.send_tcph(&mut out_tcph, &in_iph, &[]);
+                }
             }
         }
 
@@ -554,6 +553,21 @@ impl TCP {
 
             if [TCPState::SynRecvd, TCPState::Estab].contains(&self.tcb.state) {
                 self.tcb.state = TCPState::CloseWait;
+
+                let seq = self.tcb.snd_nxt;
+                let ack = self.tcb.rcv_nxt;
+                let mut out_tcph = tcph_reply(&in_tcph, seq, self.window_size);
+                out_tcph.acknowledgment_number = ack;
+                out_tcph.ack = true;
+                out_tcph.fin = true;
+
+                self.tcb.snd_nxt += 1;
+                if self.tcb.snd_una == self.tcb.snd_nxt-1 {
+                    self.tcb.snd_una += 1;
+                }
+                self.send_tcph(&mut out_tcph, &in_iph, &[]);
+
+                self.tcb.state = TCPState::LastAck;
             }
 
             if TCPState::FinWait1 == self.tcb.state {
